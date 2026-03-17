@@ -5,13 +5,22 @@ import type { PageContext } from "@/types/page-context";
 export async function getPageContext(url: string): Promise<PageContext> {
   const httpContext = await fetchPageContextViaHttp(url);
 
-  if (httpContext.signalScore >= 6 && httpContext.warnings.length === 0) {
-    return httpContext;
-  }
-
   try {
     const renderedContext = await fetchPageContextViaPlaywright(url);
-    return renderedContext.signalScore >= httpContext.signalScore ? renderedContext : httpContext;
+
+    const renderedLooksStronger =
+      renderedContext.signalScore >= httpContext.signalScore - 1 ||
+      renderedContext.textLength > httpContext.textLength ||
+      renderedContext.headings.length >= httpContext.headings.length;
+
+    if (renderedLooksStronger) {
+      return renderedContext;
+    }
+
+    return {
+      ...httpContext,
+      screenshotDataUrl: renderedContext.screenshotDataUrl,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Playwright 렌더링에 실패했습니다.";
 

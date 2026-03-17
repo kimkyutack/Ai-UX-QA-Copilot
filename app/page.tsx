@@ -316,7 +316,11 @@ export default function Home() {
         <section className={styles.featureSection}>
           <div className={styles.sectionHeading}>
             <span>Highlights</span>
-            <h2>읽기 전에 구조가 먼저 보이도록 설계한 분석 경험</h2>
+            <h2>
+              읽기 전에 구조가 먼저 보이도록
+              <br />
+              설계한 분석 경험
+            </h2>
             <p>
               복잡한 설명보다, 어떤 정보를 모으고 어떤 식으로 정리해 보여주는지
               한눈에 이해할 수 있도록 섹션과 카드의 역할을 분명히 나눴습니다.
@@ -356,6 +360,7 @@ export default function Home() {
             <h2>이런 페이지를 점검할 때 특히 유용합니다</h2>
             <p>
               랜딩 페이지의 첫인상, CTA 문구, 정보 구조, 모바일 가독성처럼
+              <br />
               텍스트 기반으로 빠르게 진단할 수 있는 문제를 우선적으로
               찾아냅니다.
             </p>

@@ -3,10 +3,7 @@ import { withSignals } from "@/lib/page-context-utils";
 import type { PageContext } from "@/types/page-context";
 
 function extractMatches(html: string, pattern: RegExp, limit: number) {
-  return dedupeStrings(
-    Array.from(html.matchAll(pattern)).map((match) => cleanupText(match[1] ?? "")).filter(Boolean),
-    limit,
-  );
+  return dedupeStrings(Array.from(html.matchAll(pattern)).map((match) => cleanupText(match[1] ?? "")).filter(Boolean), limit);
 }
 
 export async function fetchPageContextViaHttp(url: string): Promise<PageContext> {

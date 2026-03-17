@@ -9,7 +9,7 @@ export default function WorkspacePage() {
         <header className={styles.topbar}>
           <div>
             <p className={styles.brand}>Audit Flow AI</p>
-            <span className={styles.brandMeta}>Workspace</span>
+            <span className={styles.brandMeta}>분석 워크스페이스</span>
           </div>
           <nav className={styles.nav}>
             <Link href="/">소개로 돌아가기</Link>
@@ -18,8 +18,8 @@ export default function WorkspacePage() {
 
         <section className={styles.hero}>
           <div>
-            <span className={styles.badge}>Workspace</span>
-            <h1>URL을 입력하고 바로 UX QA 리포트를 생성해 보세요</h1>
+            <span className={styles.badge}>분석 워크스페이스</span>
+            <h1>도메인을 입력하고 바로 UX QA 리포트를 생성해 보세요</h1>
             <p>
               모델 연결, 분석 상태 확인, 근거 검토, 결과 해석을 한 흐름 안에서
               이어서 사용할 수 있습니다.
@@ -27,16 +27,16 @@ export default function WorkspacePage() {
           </div>
           <div className={styles.heroMeta}>
             <article>
-              <strong>1. 연결 설정</strong>
-              <p>프로바이더와 모델을 선택하고 API key를 저장합니다.</p>
+              <strong>명확성</strong>
+              <p>첫 화면에서 무엇을 위한 페이지인지 바로 이해되는지 봅니다.</p>
             </article>
             <article>
-              <strong>2. URL 분석</strong>
-              <p>페이지를 수집하고 에이전트가 문제를 정리합니다.</p>
+              <strong>행동 유도</strong>
+              <p>다음 행동이 자연스럽게 이어지도록 CTA와 흐름을 봅니다.</p>
             </article>
             <article>
-              <strong>3. 결과 확인</strong>
-              <p>근거, 이슈, 권장 수정안을 바로 읽을 수 있습니다.</p>
+              <strong>정보 계층</strong>
+              <p>무엇이 먼저 보여야 하는지 시각적 우선순위를 점검합니다.</p>
             </article>
           </div>
         </section>

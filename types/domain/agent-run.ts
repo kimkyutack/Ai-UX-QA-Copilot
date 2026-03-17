@@ -1,6 +1,6 @@
 import type { AuditCategory, AuditFinding, Severity } from "@/types/audit";
 
-export type AuditAgentName = "clarity" | "accessibility" | "conversion" | "mobile";
+export type AuditAgentName = "clarity" | "accessibility" | "conversion" | "mobile" | "visual";
 
 export type AuditAgentFinding = {
   title: string;
@@ -24,4 +24,18 @@ export type AuditAgentTrace = {
   score: number;
   confidence: number;
   summary: string;
+};
+
+export type AuditOrchestrationHooks = {
+  onStageChange?: (stage: {
+    value:
+      | "collecting"
+      | "analyzing"
+      | "synthesizing"
+      | "localizing"
+      | "persisting";
+    label: string;
+  }) => Promise<void> | void;
+  onAgentStart?: (agent: AuditAgentName) => Promise<void> | void;
+  onAgentComplete?: (trace: AuditAgentTrace) => Promise<void> | void;
 };

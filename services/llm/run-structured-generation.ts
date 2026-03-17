@@ -2,11 +2,17 @@ import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import type { ProviderRuntimeSettings } from "@/services/llm/provider-settings";
 
+type StructuredGenerationImage = {
+  dataUrl: string;
+  mediaType: "image/jpeg" | "image/png";
+};
+
 type StructuredGenerationInput = {
   schemaName: string;
   schema: Record<string, unknown>;
   systemText: string;
   userPayload: unknown;
+  images?: StructuredGenerationImage[];
 };
 
 function extractJsonBlock(value: string) {
@@ -20,8 +26,25 @@ function extractJsonBlock(value: string) {
   return value.slice(start, end + 1);
 }
 
+function stripDataUrlPrefix(dataUrl: string) {
+  const marker = "base64,";
+  const index = dataUrl.indexOf(marker);
+  return index === -1 ? dataUrl : dataUrl.slice(index + marker.length);
+}
+
 async function runOpenAIStructuredGeneration(input: StructuredGenerationInput, apiKey: string, model: string) {
   const client = new OpenAI({ apiKey });
+  const userContent: Array<Record<string, unknown>> = [
+    { type: "input_text", text: JSON.stringify(input.userPayload) },
+  ];
+
+  for (const image of input.images ?? []) {
+    userContent.push({
+      type: "input_image",
+      image_url: image.dataUrl,
+    });
+  }
+
   const response = await client.responses.create({
     model,
     reasoning: { effort: "medium" },
@@ -41,7 +64,7 @@ async function runOpenAIStructuredGeneration(input: StructuredGenerationInput, a
       },
       {
         role: "user",
-        content: [{ type: "input_text", text: JSON.stringify(input.userPayload) }],
+        content: userContent as never,
       },
     ],
   });
@@ -51,6 +74,24 @@ async function runOpenAIStructuredGeneration(input: StructuredGenerationInput, a
 
 async function runAnthropicStructuredGeneration(input: StructuredGenerationInput, apiKey: string, model: string) {
   const client = new Anthropic({ apiKey });
+  const messageContent: Array<Record<string, unknown>> = [
+    {
+      type: "text",
+      text: JSON.stringify(input.userPayload),
+    },
+  ];
+
+  for (const image of input.images ?? []) {
+    messageContent.push({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: image.mediaType,
+        data: stripDataUrlPrefix(image.dataUrl),
+      },
+    });
+  }
+
   const response = await client.messages.create({
     model,
     max_tokens: 3000,
@@ -63,7 +104,7 @@ async function runAnthropicStructuredGeneration(input: StructuredGenerationInput
     messages: [
       {
         role: "user",
-        content: JSON.stringify(input.userPayload),
+        content: messageContent as never,
       },
     ],
   });

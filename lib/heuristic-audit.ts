@@ -40,6 +40,7 @@ export function generateHeuristicAuditReport(target: string): AuditReport {
     {
       id: "hero-clarity",
       title: "히어로 메시지가 사용자의 과업을 충분히 선명하게 설명하지 못합니다",
+      axis: "명확성",
       severity: context.hasMarketing ? "보통" : "높음",
       category: "전환",
       rationale:
@@ -50,6 +51,7 @@ export function generateHeuristicAuditReport(target: string): AuditReport {
     {
       id: "cta-hierarchy",
       title: "주요 CTA의 시각적 우선순위가 약합니다",
+      axis: "행동 유도",
       severity: "보통",
       category: "전환",
       rationale:
@@ -60,6 +62,7 @@ export function generateHeuristicAuditReport(target: string): AuditReport {
     {
       id: "heading-structure",
       title: "헤딩 구조가 단계별로 자연스럽게 이어지지 않을 가능성이 큽니다",
+      axis: "정보 계층",
       severity: "보통",
       category: "접근성",
       rationale:
@@ -70,6 +73,7 @@ export function generateHeuristicAuditReport(target: string): AuditReport {
     {
       id: "proof-density",
       title: "신뢰 요소가 첫 화면 아래로 늦게 배치됐을 수 있습니다",
+      axis: "행동 유도",
       severity: context.hasCommerce ? "높음" : "보통",
       category: "콘텐츠",
       rationale:
@@ -80,6 +84,7 @@ export function generateHeuristicAuditReport(target: string): AuditReport {
     {
       id: "mobile-spacing",
       title: "모바일에서 스크롤 공백이 길게 느껴질 가능성이 있습니다",
+      axis: "밀도와 여백",
       severity: context.hasMobileRisk ? "높음" : "보통",
       category: "모바일",
       rationale:
@@ -90,6 +95,7 @@ export function generateHeuristicAuditReport(target: string): AuditReport {
     {
       id: "button-language",
       title: "버튼 문구가 의도 중심으로 더 구체화될 수 있습니다",
+      axis: "행동 유도",
       severity: "낮음",
       category: "콘텐츠",
       rationale:
@@ -103,6 +109,7 @@ export function generateHeuristicAuditReport(target: string): AuditReport {
     findings.push({
       id: "doc-navigation",
       title: "문서 탐색 구조가 신규 사용자에게 과하게 복잡할 수 있습니다",
+      axis: "일관성",
       severity: "보통",
       category: "일관성",
       rationale:

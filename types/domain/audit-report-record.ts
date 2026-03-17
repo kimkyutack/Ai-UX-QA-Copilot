@@ -21,6 +21,7 @@ export type AuditReportRecord = {
     buttons?: string[];
     links?: string[];
     textSnippet?: string;
+    screenshotDataUrl?: string;
     agentTraces?: AuditAgentTrace[];
   };
 };

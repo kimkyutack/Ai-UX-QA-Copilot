@@ -17,14 +17,13 @@ model Workspace {
 }
 
 model Project {
-  id        String     @id @default(cuid())
+  id          String          @id @default(cuid())
   workspaceId String
-  name      String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  targets   ProjectTarget[]
-  jobs      AuditJob[]
+  name        String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  targets     ProjectTarget[]
 }
 
 model ProjectTarget {
@@ -36,24 +35,34 @@ model ProjectTarget {
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
+model WorkspaceAISettings {
+  workspaceId String   @id
+  provider    String
+  model       String
+  updatedAt   DateTime @updatedAt
+}
+
 model AuditJob {
-  id          String      @id @default(cuid())
-  projectId   String
-  targetUrl   String
-  status      AuditJobStatus
+  id            String       @id @default(cuid())
+  projectId     String?
+  targetUrl     String
+  status        AuditJobStatus
+  stage         AuditJobStage @default(queued)
+  stageLabel    String?
   errorMessage String?
-  source      String?
-  signalScore Int?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  report      AuditReport?
+  source        String?
+  signalScore   Int?
+  agentStatesJson Json?
+  reportPreviewJson Json?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  report        AuditReport?
 }
 
 model AuditReport {
-  id         String   @id @default(cuid())
+  id          String   @id @default(cuid())
   jobId       String   @unique
-  projectId   String
+  projectId   String?
   targetUrl   String
   summaryJson Json
   debugJson   Json
@@ -64,6 +73,17 @@ model AuditReport {
 enum AuditJobStatus {
   queued
   running
+  completed
+  failed
+}
+
+enum AuditJobStage {
+  queued
+  collecting
+  analyzing
+  synthesizing
+  localizing
+  persisting
   completed
   failed
 }

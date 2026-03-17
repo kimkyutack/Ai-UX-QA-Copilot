@@ -34,6 +34,7 @@ export function verifyAuditReport(report: AuditReport, agentResults: AuditAgentR
     })
     .map((finding) => ({
       ...finding,
+      axis: finding.axis ?? "명확성",
       action: sanitizeAction(finding.action),
       evidence: (finding.evidence ?? []).filter((item) => allowedEvidence.has(item.trim())).slice(0, 3),
     }))

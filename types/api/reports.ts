@@ -7,4 +7,5 @@ export type GetReportResponse = {
 
 export type ListReportsResponse = {
   reports: AuditReportRecord[];
+  error?: string;
 };

@@ -5,6 +5,7 @@ import type { AIProvider } from "@/types/domain/ai-settings";
 export type AnalyzeResponse = {
   report?: AuditReport;
   error?: string;
+  reportRecordId?: string;
   debug?: {
     signalScore: number;
     warnings: string[];
@@ -17,6 +18,7 @@ export type AnalyzeResponse = {
     buttons?: string[];
     links?: string[];
     textSnippet?: string;
+    screenshotDataUrl?: string;
     agentTraces?: AuditAgentTrace[];
   };
 };

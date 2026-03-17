@@ -10,4 +10,5 @@ export type PageContext = {
   signalScore: number;
   warnings: string[];
   source: "fetch" | "playwright";
+  screenshotDataUrl?: string;
 };
