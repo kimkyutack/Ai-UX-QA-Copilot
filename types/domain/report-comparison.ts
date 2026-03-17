@@ -5,13 +5,31 @@ export type ReportComparisonSection = {
   delta: number;
 };
 
+export type ReportComparisonStatus = {
+  openCount: number;
+  inProgressCount: number;
+  resolvedCount: number;
+};
+
+export type ReportComparisonFindingDelta = {
+  id: string;
+  title: string;
+  category: string;
+  severity: string;
+  axis: string;
+};
+
 export type ReportComparisonSummary = {
   currentScore: number;
   previousScore: number;
   scoreDelta: number;
   improvedCount: number;
   regressedCount: number;
-  addedFindings: string[];
-  resolvedFindings: string[];
+  unchangedCount: number;
+  addedFindings: ReportComparisonFindingDelta[];
+  resolvedFindings: ReportComparisonFindingDelta[];
   sectionChanges: ReportComparisonSection[];
+  currentStatus: ReportComparisonStatus;
+  previousStatus: ReportComparisonStatus;
+  statusDelta: ReportComparisonStatus;
 };

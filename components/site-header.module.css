@@ -1,0 +1,128 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(18px);
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  width: min(1440px, calc(100vw - 28px));
+  min-height: 76px;
+  margin: 0 auto;
+}
+
+.brandBlock {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+}
+
+.brandMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0f172a, #2563eb);
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.brand {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.brandMeta {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.nav {
+  display: inline-flex;
+  justify-self: center;
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.88);
+}
+
+.nav a {
+  padding: 10px 14px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.nav a:hover {
+  color: var(--ink);
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.loginLink,
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 16px;
+  font-weight: 700;
+}
+
+.loginLink {
+  color: var(--muted);
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #0f172a, #1d4ed8);
+  color: #ffffff;
+  box-shadow: 0 18px 30px rgba(29, 78, 216, 0.24);
+}
+
+@media (max-width: 1120px) {
+  .inner {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    padding: 14px 0;
+  }
+
+  .nav {
+    justify-self: start;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .actions,
+  .nav {
+    width: 100%;
+  }
+
+  .loginLink,
+  .primaryButton {
+    width: 100%;
+  }
+}

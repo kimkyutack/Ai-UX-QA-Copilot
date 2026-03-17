@@ -1,6 +1,7 @@
 import type { AuditJob } from "@/types/domain/audit-job";
 import type { AuditReportRecord } from "@/types/domain/audit-report-record";
 import type { AIProvider } from "@/types/domain/ai-settings";
+import type { AnalysisMode } from "@/types/domain/analysis-mode";
 
 export type CreateJobRequest = {
   url: string;
@@ -8,6 +9,7 @@ export type CreateJobRequest = {
   provider?: AIProvider;
   model?: string;
   apiKey?: string;
+  analysisMode?: AnalysisMode;
 };
 
 export type CreateJobResponse = {

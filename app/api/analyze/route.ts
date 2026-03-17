@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { runAuditJob } from "@/services/analysis/run-audit-job";
 import type { AIProvider } from "@/types/domain/ai-settings";
+import type { AnalysisMode } from "@/types/domain/analysis-mode";
 
 type AnalyzeRequest = {
   url?: string;
   provider?: AIProvider;
   model?: string;
   apiKey?: string;
+  analysisMode?: AnalysisMode;
 };
 
 export async function POST(request: Request) {
@@ -27,6 +29,7 @@ export async function POST(request: Request) {
 
   const result = await runAuditJob({
     url: normalized,
+    analysisMode: body.analysisMode ?? "saas",
     providerSettings: {
       provider: body.provider,
       model: body.model,

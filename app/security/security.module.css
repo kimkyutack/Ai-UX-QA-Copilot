@@ -1,0 +1,303 @@
+.page {
+  padding: 92px 0 96px;
+}
+
+.shellWide {
+  width: min(1520px, calc(100vw - 20px));
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 520px);
+  gap: 28px;
+  min-height: 72vh;
+  padding: 44px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 40px;
+  background:
+    radial-gradient(circle at 82% 12%, rgba(37, 99, 235, 0.14), transparent 24%),
+    radial-gradient(circle at 16% 88%, rgba(125, 211, 252, 0.18), transparent 28%),
+    linear-gradient(180deg, #fbfdff 0%, #eff6ff 100%);
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.07);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heroCopy {
+  display: grid;
+  align-content: center;
+  max-width: 720px;
+}
+
+.heroCopy h1,
+.verifyCopy h2,
+.ctaBand h2 {
+  margin: 18px 0 14px;
+  color: #0f172a;
+  letter-spacing: -0.08em;
+}
+
+.heroCopy h1 {
+  max-width: 11ch;
+  font-size: clamp(3rem, 5.6vw, 5.4rem);
+  line-height: 0.92;
+}
+
+.heroCopy p,
+.signalCard p {
+  margin: 0;
+  max-width: 58ch;
+  color: #475467;
+  font-size: 1.04rem;
+  line-height: 1.76;
+}
+
+.heroActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.primaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 0 18px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #1537b8, #2563eb);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 18px 34px rgba(37, 99, 235, 0.26);
+}
+
+.heroVisual {
+  display: grid;
+  gap: 18px;
+  align-content: center;
+}
+
+.dataLane,
+.visualPanel,
+.signalCard,
+.verifySection,
+.ctaBand {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 30px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.05);
+}
+
+.dataLane {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+}
+
+.dataNodePrimary,
+.dataNode,
+.dataNodeMuted {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 210px;
+  min-height: 54px;
+  padding: 0 18px;
+  border-radius: 18px;
+  font-weight: 800;
+}
+
+.dataNodePrimary {
+  background: linear-gradient(135deg, #0f172a, #1d4ed8);
+  color: #ffffff;
+}
+
+.dataNode {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+}
+
+.dataNodeMuted {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.dataBeam {
+  width: 2px;
+  height: 28px;
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.2), rgba(14, 165, 233, 0.56));
+}
+
+.visualPanel {
+  display: grid;
+  gap: 12px;
+  padding: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 247, 255, 0.9));
+}
+
+.visualRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.visualRow span {
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.visualRow strong {
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.signalSection {
+  margin-top: 24px;
+}
+
+.signalGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.signalCard {
+  display: grid;
+  gap: 14px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.signalCard span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.signalCard strong,
+.verifyCard strong {
+  color: #0f172a;
+  font-size: 1rem;
+  letter-spacing: -0.03em;
+}
+
+.verifySection {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 18px;
+  margin-top: 24px;
+  padding: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 249, 255, 0.94));
+}
+
+.verifyCopy h2 {
+  font-size: clamp(1.9rem, 3vw, 3.2rem);
+  line-height: 0.96;
+}
+
+.verifyRail {
+  display: grid;
+  gap: 14px;
+}
+
+.verifyCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 74px;
+  padding: 0 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.verifyDot {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb, #60a5fa);
+  box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.1);
+}
+
+.ctaBand {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  margin-top: 24px;
+  padding: 26px 30px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.94));
+}
+
+.ctaBand h2 {
+  font-size: clamp(1.8rem, 3vw, 3rem);
+  line-height: 1;
+}
+
+@media (max-width: 1120px) {
+  .hero,
+  .signalGrid,
+  .verifySection,
+  .ctaBand {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding-top: 84px;
+  }
+
+  .hero,
+  .signalCard,
+  .verifySection,
+  .ctaBand,
+  .dataLane,
+  .visualPanel {
+    padding: 22px;
+  }
+
+  .heroCopy h1 {
+    max-width: none;
+  }
+
+  .primaryAction {
+    width: 100%;
+  }
+}

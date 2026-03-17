@@ -1,12 +1,14 @@
 import type { AuditReport } from "@/types/audit";
 import type { AuditAgentTrace } from "@/types/domain/agent-run";
 import type { AIProvider } from "@/types/domain/ai-settings";
+import type { AnalysisMode } from "@/types/domain/analysis-mode";
 
 export type AnalyzeResponse = {
   report?: AuditReport;
   error?: string;
   reportRecordId?: string;
   debug?: {
+    analysisMode?: AnalysisMode;
     signalScore: number;
     warnings: string[];
     source: "fetch" | "playwright";
@@ -23,7 +25,15 @@ export type AnalyzeResponse = {
   };
 };
 
-export async function requestAuditReport(url: string, options: { provider: AIProvider; model: string; apiKey: string }) {
+export async function requestAuditReport(
+  url: string,
+  options: {
+    provider: AIProvider;
+    model: string;
+    apiKey: string;
+    analysisMode?: AnalysisMode;
+  },
+) {
   const response = await fetch("/api/analyze", {
     method: "POST",
     headers: {
@@ -34,6 +44,7 @@ export async function requestAuditReport(url: string, options: { provider: AIPro
       provider: options.provider,
       model: options.model,
       apiKey: options.apiKey,
+      analysisMode: options.analysisMode,
     }),
   });
 

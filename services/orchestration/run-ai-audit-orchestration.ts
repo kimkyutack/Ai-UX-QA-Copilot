@@ -3,6 +3,7 @@ import { synthesizeAuditReport } from "@/services/openai/synthesize-audit-report
 import { localizeAuditOutput } from "@/services/orchestration/localize-audit-output";
 import { verifyAuditReport } from "@/services/orchestration/verify-audit-report";
 import type { ProviderRuntimeSettings } from "@/services/llm/provider-settings";
+import type { AnalysisMode } from "@/types/domain/analysis-mode";
 import type {
   AuditAgentTrace,
   AuditOrchestrationHooks,
@@ -13,6 +14,7 @@ export async function runAiAuditOrchestration(
   target: string,
   pageContext: PageContext,
   settings: ProviderRuntimeSettings,
+  analysisMode: AnalysisMode,
   hooks?: AuditOrchestrationHooks,
 ) {
   await hooks?.onStageChange?.({
@@ -28,7 +30,7 @@ export async function runAiAuditOrchestration(
   ] as const;
   const jobs = agentQueue.map(async (agent) => {
     await hooks?.onAgentStart?.(agent);
-    const result = await runSpecialistAgent(agent, pageContext, settings);
+    const result = await runSpecialistAgent(agent, pageContext, settings, analysisMode);
     await hooks?.onAgentComplete?.({
       agent: result.agent,
       score: result.score,
@@ -41,7 +43,7 @@ export async function runAiAuditOrchestration(
   if (pageContext.screenshotDataUrl) {
     jobs.push((async () => {
       await hooks?.onAgentStart?.("visual");
-      const result = await runSpecialistAgent("visual", pageContext, settings);
+      const result = await runSpecialistAgent("visual", pageContext, settings, analysisMode);
       await hooks?.onAgentComplete?.({
         agent: result.agent,
         score: result.score,
@@ -57,7 +59,7 @@ export async function runAiAuditOrchestration(
     value: "synthesizing",
     label: "에이전트 결과를 종합 리포트로 정리하고 있습니다.",
   });
-  const synthesizedReport = await synthesizeAuditReport(target, pageContext, agentResults, settings);
+  const synthesizedReport = await synthesizeAuditReport(target, pageContext, agentResults, settings, analysisMode);
   const verifiedReport = verifyAuditReport(synthesizedReport, agentResults);
   const agentTraces: AuditAgentTrace[] = agentResults.map((agent) => ({
     agent: agent.agent,

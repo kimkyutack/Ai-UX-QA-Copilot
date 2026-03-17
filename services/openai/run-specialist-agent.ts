@@ -2,6 +2,7 @@ import { runStructuredGeneration } from "@/services/llm/run-structured-generatio
 import { getBenchmarkSiteLabel, isBenchmarkSite } from "@/lib/benchmark-sites";
 import type { ProviderRuntimeSettings } from "@/services/llm/provider-settings";
 import type { AuditAxis, AuditCategory, Severity } from "@/types/audit";
+import type { AnalysisMode } from "@/types/domain/analysis-mode";
 import type { AuditAgentName, AuditAgentResult } from "@/types/domain/agent-run";
 import type { PageContext } from "@/types/page-context";
 
@@ -93,6 +94,14 @@ const agentInstructions: Record<AuditAgentName, string> = {
   ].join("\n"),
 };
 
+const analysisModeInstructions: Record<AnalysisMode, string> = {
+  saas: "이 분석은 SaaS 랜딩 기준입니다. 제품 이해, 핵심 가치 전달, CTA 흐름, 신뢰 요소, 데모/가입 전환을 중점적으로 보세요.",
+  ecommerce: "이 분석은 이커머스 기준입니다. 상품 이해, 구매 동선, 가격/혜택 전달, 리뷰/신뢰 요소, 장바구니 또는 구매 CTA를 중점적으로 보세요.",
+  portfolio: "이 분석은 포트폴리오 기준입니다. 누구의 작업인지, 대표 프로젝트 노출, 전문성 신뢰 형성, 문의/지원 전환을 중점적으로 보세요.",
+  recruiting: "이 분석은 채용 페이지 기준입니다. 포지션 이해, 지원 자격과 기대 역할, 문화/보상 정보, 지원 CTA와 지원 과정의 명확성을 보세요.",
+  docs: "이 분석은 문서/가이드 기준입니다. 탐색 구조, 목차/헤딩 계층, 예제 접근성, 학습 흐름, 다음 단계 유도를 중점적으로 보세요.",
+};
+
 function clampScore(value: unknown, fallback: number) {
   return typeof value === "number" && Number.isFinite(value)
     ? Math.max(0, Math.min(100, Math.round(value)))
@@ -129,6 +138,7 @@ export async function runSpecialistAgent(
   agent: AuditAgentName,
   pageContext: PageContext,
   settings: ProviderRuntimeSettings,
+  analysisMode: AnalysisMode,
 ): Promise<AuditAgentResult> {
   const benchmarkLabel = getBenchmarkSiteLabel(pageContext.url);
   const benchmarkRule = benchmarkLabel
@@ -147,6 +157,7 @@ export async function runSpecialistAgent(
       systemText: [
         benchmarkPrinciples,
         benchmarkRule,
+        analysisModeInstructions[analysisMode],
         agentInstructions[agent],
         "반드시 제공된 페이지 evidence만 사용하세요.",
         "각 finding에는 반드시 하나의 axis를 지정하세요.",

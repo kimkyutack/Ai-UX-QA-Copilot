@@ -26,7 +26,7 @@ export async function fetchAuditJob(jobId: string) {
 
 export async function runAuditJobRequest(
   jobId: string,
-  payload: Pick<CreateJobRequest, "provider" | "model" | "apiKey">,
+  payload: Pick<CreateJobRequest, "provider" | "model" | "apiKey" | "analysisMode">,
 ) {
   const response = await fetch(`/api/jobs/${jobId}`, {
     method: "POST",

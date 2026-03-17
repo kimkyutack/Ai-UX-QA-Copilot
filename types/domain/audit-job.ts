@@ -1,4 +1,5 @@
 import type { AuditAgentName } from "@/types/domain/agent-run";
+import type { AnalysisMode } from "@/types/domain/analysis-mode";
 
 export type AuditJobStatus = "queued" | "running" | "completed" | "failed";
 export type AuditJobStage =
@@ -34,6 +35,7 @@ export type AuditJob = {
   id: string;
   projectId: string;
   targetUrl: string;
+  analysisMode: AnalysisMode;
   status: AuditJobStatus;
   stage: AuditJobStage;
   stageLabel?: string;

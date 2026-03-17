@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { processAuditJob } from "@/services/analysis/run-audit-job";
 import { getAuditJob, getAuditReportByJobId } from "@/services/repositories/audit-store";
 import type { CreateJobRequest } from "@/types/api/jobs";
+import type { AnalysisMode } from "@/types/domain/analysis-mode";
 
 export async function GET(_: Request, context: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await context.params;
@@ -32,6 +33,7 @@ export async function POST(request: Request, context: { params: Promise<{ jobId:
   const result = await processAuditJob(jobId, {
     url: job.targetUrl,
     projectId: job.projectId,
+    analysisMode: (body.analysisMode ?? job.analysisMode ?? "saas") as AnalysisMode,
     providerSettings: {
       provider: body.provider,
       model: body.model,

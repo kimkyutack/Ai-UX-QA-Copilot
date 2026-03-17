@@ -2,25 +2,41 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { compareAuditReports } from "@/lib/compare-audit-reports";
+import { generateImprovementDrafts } from "@/lib/generate-improvement-drafts";
+import { ReportShareActions } from "@/components/report-share-actions";
+import { createProjectRequest, fetchProjects } from "@/services/api/projects";
 import type { AnalyzeResponse } from "@/services/api/analyze";
 import {
   createAuditJobRequest,
   fetchAuditJob,
   runAuditJobRequest,
 } from "@/services/api/jobs";
-import { fetchAuditReports } from "@/services/api/reports";
+import {
+  fetchAuditReports,
+  updateAuditReportFinding,
+} from "@/services/api/reports";
 import {
   fetchWorkspaceSettings,
   updateWorkspaceSettings,
 } from "@/services/api/settings";
 import type { AuditFinding, AuditReport, Severity } from "@/types/audit";
 import type { WorkspaceSettingsResponse } from "@/types/api/settings";
+import {
+  analysisModeOptions,
+  type AnalysisMode,
+} from "@/types/domain/analysis-mode";
 import type { AuditJob } from "@/types/domain/audit-job";
 import type { AuditReportRecord } from "@/types/domain/audit-report-record";
 import type { AIProvider } from "@/types/domain/ai-settings";
+import type { Project } from "@/types/domain/project";
+import type {
+  FindingStatus,
+  ReportCollaboration,
+} from "@/types/domain/report-collaboration";
 import styles from "./ux-copilot.module.css";
 
 type ReportViewMode = "overview" | "design" | "pm" | "marketing";
+type UtilityTab = "history" | "status" | "debug" | null;
 
 const sampleTargets = ["stripe.com", "notion.so", "vercel.com", "linear.app"];
 const loadingSteps = [
@@ -44,6 +60,44 @@ const agentLabelMap = {
   mobile: "모바일",
   visual: "비주얼",
 } as const;
+
+const findingStatusLabelMap: Record<FindingStatus, string> = {
+  open: "열림",
+  in_progress: "진행 중",
+  resolved: "해결됨",
+};
+
+type FindingDraft = {
+  status: FindingStatus;
+  assignee: string;
+  note: string;
+};
+
+function buildFindingDraftMap(collaboration?: ReportCollaboration) {
+  return Object.fromEntries(
+    (collaboration?.findingStates ?? []).map((item) => [
+      item.findingId,
+      {
+        status: item.status,
+        assignee: item.assignee ?? "",
+        note: item.note ?? "",
+      } satisfies FindingDraft,
+    ]),
+  ) as Record<string, FindingDraft>;
+}
+
+function getFindingDraft(
+  findingId: string,
+  drafts: Record<string, FindingDraft>,
+): FindingDraft {
+  return (
+    drafts[findingId] ?? {
+      status: "open",
+      assignee: "",
+      note: "",
+    }
+  );
+}
 
 function getAgentStatusLabel(
   status: "queued" | "running" | "completed" | "failed",
@@ -114,17 +168,6 @@ function buildViewHeadline(mode: ReportViewMode) {
   }
 }
 
-function normalizeUrl(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  return trimmed.startsWith("http://") || trimmed.startsWith("https://")
-    ? trimmed
-    : `https://${trimmed}`;
-}
-
 function formatCreatedAt(value: string) {
   return new Intl.DateTimeFormat("ko-KR", {
     month: "short",
@@ -173,6 +216,11 @@ export function UxCopilot() {
   const [currentJob, setCurrentJob] = useState<AuditJob | null>(null);
   const [currentReportId, setCurrentReportId] = useState<string | null>(null);
   const [history, setHistory] = useState<AuditReportRecord[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("demo-project");
+  const [newProjectName, setNewProjectName] = useState("");
+  const [projectError, setProjectError] = useState<string | null>(null);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [comparisonTargetId, setComparisonTargetId] = useState<string | null>(
     null,
   );
@@ -191,12 +239,24 @@ export function UxCopilot() {
   const [provider, setProvider] = useState<AIProvider>("openai");
   const [model, setModel] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("saas");
+  const [historyQuery, setHistoryQuery] = useState("");
+  const [historySort, setHistorySort] = useState<"latest" | "score">("latest");
+  const [utilityTab, setUtilityTab] = useState<UtilityTab>(null);
+  const [findingDrafts, setFindingDrafts] = useState<
+    Record<string, FindingDraft>
+  >({});
+  const [savingFindingId, setSavingFindingId] = useState<string | null>(null);
+  const [collaborationError, setCollaborationError] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadSettings() {
       const response = await fetchWorkspaceSettings();
+      const projectResponse = await fetchProjects();
       if (cancelled) {
         return;
       }
@@ -204,6 +264,8 @@ export function UxCopilot() {
       setSettings(response);
       setProvider(response.settings.provider);
       setModel(response.settings.model);
+      setProjects(projectResponse.projects ?? []);
+      setSelectedProjectId(projectResponse.projects?.[0]?.id ?? "demo-project");
     }
 
     loadSettings().catch(() => {
@@ -242,6 +304,20 @@ export function UxCopilot() {
     [currentReportId, history],
   );
 
+  useEffect(() => {
+    setFindingDrafts(buildFindingDraftMap(currentHistoryRecord?.collaboration));
+  }, [currentHistoryRecord]);
+
+  useEffect(() => {
+    if (!selectedProjectId) {
+      return;
+    }
+
+    loadHistory(selectedProjectId).catch(() => {
+      setHistory([]);
+    });
+  }, [selectedProjectId]);
+
   const comparisonTarget = useMemo(
     () => history.find((item) => item.id === comparisonTargetId) ?? null,
     [comparisonTargetId, history],
@@ -252,13 +328,31 @@ export function UxCopilot() {
       return null;
     }
 
-    return compareAuditReports(
-      currentHistoryRecord.report,
-      comparisonTarget.report,
-    );
+    return compareAuditReports(currentHistoryRecord, comparisonTarget);
   }, [comparisonTarget, currentHistoryRecord]);
   const previewSections = currentJob?.preview?.sections ?? [];
   const previewHighlights = currentJob?.preview?.highlights ?? [];
+  const filteredHistory = useMemo(() => {
+    const normalizedQuery = historyQuery.trim().toLowerCase();
+    const searched = normalizedQuery
+      ? history.filter((item) => {
+          const haystack = `${item.report.stance} ${item.targetUrl} ${
+            item.debug.analysisMode ?? ""
+          }`.toLowerCase();
+          return haystack.includes(normalizedQuery);
+        })
+      : history;
+
+    return [...searched].sort((a, b) => {
+      if (historySort === "score") {
+        if (b.report.score !== a.report.score) {
+          return b.report.score - a.report.score;
+        }
+      }
+
+      return a.createdAt < b.createdAt ? 1 : -1;
+    });
+  }, [history, historyQuery, historySort]);
   const filteredFindings = useMemo(
     () =>
       report?.findings.filter((finding) =>
@@ -291,15 +385,19 @@ export function UxCopilot() {
       ),
     );
   }, [filteredFindings, report, viewMode]);
+  const effectiveAnalysisMode =
+    debug?.analysisMode ?? currentJob?.analysisMode ?? analysisMode;
+  const improvementDrafts = useMemo(
+    () =>
+      report ? generateImprovementDrafts(effectiveAnalysisMode, report) : [],
+    [effectiveAnalysisMode, report],
+  );
 
-  async function loadHistory(
-    targetUrl: string,
-    preferredCurrentReportId?: string,
-  ) {
+  async function loadHistory(projectId: string, preferredCurrentReportId?: string) {
     setIsLoadingHistory(true);
 
     try {
-      const response = await fetchAuditReports(targetUrl, 8);
+      const response = await fetchAuditReports({ projectId, limit: 20 });
       const reports = response.reports ?? [];
       setHistory(reports);
 
@@ -326,12 +424,13 @@ export function UxCopilot() {
         );
       }
 
-      const normalizedUrl = normalizeUrl(url);
       const created = await createAuditJobRequest({
         url,
+        projectId: selectedProjectId,
         provider,
         model,
         apiKey: apiKey.trim(),
+        analysisMode,
       });
 
       if (created.error || !created.job) {
@@ -343,6 +442,7 @@ export function UxCopilot() {
         provider,
         model,
         apiKey: apiKey.trim(),
+        analysisMode,
       }).catch(() => null);
 
       let completedReport: AuditReportRecord | null = null;
@@ -379,7 +479,8 @@ export function UxCopilot() {
       setReport(completedReport.report);
       setDebug(completedReport.debug);
       setCurrentReportId(completedReport.id);
-      await loadHistory(normalizedUrl, completedReport.id);
+      setUtilityTab("status");
+      await loadHistory(selectedProjectId, completedReport.id);
     } catch (requestError) {
       setReport(null);
       setDebug(undefined);
@@ -440,6 +541,87 @@ export function UxCopilot() {
     setComparisonTargetId(
       history.find((item) => item.id !== record.id)?.id ?? null,
     );
+  }
+
+  async function handleCreateProject() {
+    setProjectError(null);
+    setIsCreatingProject(true);
+
+    try {
+      const response = await createProjectRequest({ name: newProjectName });
+
+      if (response.error || !response.project) {
+        throw new Error(response.error ?? "프로젝트를 생성하지 못했습니다.");
+      }
+
+      setProjects((current) => [response.project as Project, ...current]);
+      setSelectedProjectId(response.project.id);
+      setNewProjectName("");
+      await loadHistory(response.project.id);
+    } catch (createError) {
+      setProjectError(
+        createError instanceof Error
+          ? createError.message
+          : "프로젝트를 생성하지 못했습니다.",
+      );
+    } finally {
+      setIsCreatingProject(false);
+    }
+  }
+
+  function handleFindingDraftChange(
+    findingId: string,
+    patch: Partial<FindingDraft>,
+  ) {
+    setFindingDrafts((current) => ({
+      ...current,
+      [findingId]: {
+        ...getFindingDraft(findingId, current),
+        ...patch,
+      },
+    }));
+  }
+
+  async function handleSaveFinding(findingId: string) {
+    if (!currentReportId) {
+      return;
+    }
+
+    const draft = getFindingDraft(findingId, findingDrafts);
+    setCollaborationError(null);
+    setSavingFindingId(findingId);
+
+    try {
+      const response = await updateAuditReportFinding(currentReportId, {
+        findingId,
+        status: draft.status,
+        assignee: draft.assignee.trim() || undefined,
+        note: draft.note.trim() || undefined,
+      });
+
+      if (response.error || !response.report) {
+        throw new Error(response.error ?? "협업 상태를 저장하지 못했습니다.");
+      }
+
+      setHistory((current) =>
+        current.map((item) =>
+          item.id === response.report?.id ? response.report : item,
+        ),
+      );
+
+      if (currentReportId === response.report.id) {
+        setDebug(response.report.debug);
+        setReport(response.report.report);
+      }
+    } catch (saveError) {
+      setCollaborationError(
+        saveError instanceof Error
+          ? saveError.message
+          : "협업 상태를 저장하지 못했습니다.",
+      );
+    } finally {
+      setSavingFindingId(null);
+    }
   }
 
   return (
@@ -578,6 +760,41 @@ export function UxCopilot() {
             </div>
 
             <label className={styles.field}>
+              <span>프로젝트</span>
+              <select
+                className={styles.select}
+                value={selectedProjectId}
+                onChange={(event) => setSelectedProjectId(event.target.value)}
+              >
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className={styles.inlineProjectForm}>
+              <input
+                aria-label="새 프로젝트 이름"
+                value={newProjectName}
+                onChange={(event) => setNewProjectName(event.target.value)}
+                placeholder="새 프로젝트 만들기"
+                className={styles.inlineProjectInput}
+              />
+              <button
+                type="button"
+                className={styles.inlineProjectButton}
+                disabled={isCreatingProject}
+                onClick={handleCreateProject}
+              >
+                {isCreatingProject ? "생성 중..." : "추가"}
+              </button>
+            </div>
+
+            {projectError ? <p className={styles.error}>{projectError}</p> : null}
+
+            <label className={styles.field}>
               <span>분석할 도메인</span>
               <input
                 aria-label="분석할 도메인"
@@ -585,6 +802,30 @@ export function UxCopilot() {
                 onChange={(event) => setUrl(event.target.value)}
                 placeholder="example.com"
               />
+            </label>
+
+            <label className={styles.field}>
+              <span>분석 모드</span>
+              <select
+                className={styles.select}
+                value={analysisMode}
+                onChange={(event) =>
+                  setAnalysisMode(event.target.value as AnalysisMode)
+                }
+              >
+                {analysisModeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <small className={styles.helper}>
+                {
+                  analysisModeOptions.find(
+                    (option) => option.value === analysisMode,
+                  )?.description
+                }
+              </small>
             </label>
 
             <button
@@ -717,135 +958,219 @@ export function UxCopilot() {
               </p>
             )}
           </section> */}
-
-          <details
-            className={`${styles.infoDisclosure} ${styles.evidenceCard}`}
-          >
-            <summary className={styles.disclosureSummary}>
-              <strong>분석 근거와 디버그 정보</strong>
-              <span>필요할 때만 펼쳐 보기</span>
-            </summary>
-            {debug ? (
-              <div className={styles.debugEvidence}>
-                <div>
-                  <strong>페이지 제목</strong>
-                  <p>{debug.title ?? "-"}</p>
-                </div>
-                <div>
-                  <strong>페이지 설명</strong>
-                  <p>{debug.description ?? "-"}</p>
-                </div>
-                <div>
-                  <strong>헤딩</strong>
-                  <div className={styles.evidenceList}>
-                    {(debug.headings?.slice(0, 6) ?? []).map((item) => (
-                      <span key={item}>{item}</span>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <strong>버튼</strong>
-                  <div className={styles.evidenceList}>
-                    {(debug.buttons?.slice(0, 6) ?? []).map((item) => (
-                      <span key={item}>{item}</span>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <strong>링크</strong>
-                  <div className={styles.evidenceList}>
-                    {(debug.links?.slice(0, 6) ?? []).map((item) => (
-                      <span key={item}>{item}</span>
-                    ))}
-                  </div>
-                </div>
-                {debug.screenshotDataUrl ? (
-                  <div>
-                    <strong>시각 근거 스크린샷</strong>
-                    <img
-                      className={styles.screenshotPreview}
-                      src={debug.screenshotDataUrl}
-                      alt="분석에 사용된 페이지 스크린샷"
-                    />
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <p className={styles.helper}>
-                분석을 실행하면 AI가 참고한 원본 페이지 근거가 여기에
-                표시됩니다.
-              </p>
-            )}
-          </details>
         </aside>
 
-        <aside className={styles.floatingSidebar}>
-          <section className={`${styles.infoCard} ${styles.historyCard}`}>
-            <div className={styles.cardHead}>
-              <strong>최근 분석 히스토리</strong>
-              <span>저장된 리포트</span>
-            </div>
-            {isLoadingHistory ? (
-              <p className={styles.helper}>히스토리를 불러오는 중입니다.</p>
-            ) : history.length ? (
-              <div className={styles.historyList}>
-                {history.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={
-                      item.id === currentReportId
-                        ? styles.historyItemActive
-                        : styles.historyItem
-                    }
-                    onClick={() => handleSelectHistory(item)}
-                  >
-                    <strong>{item.report.stance}</strong>
-                    <span>{formatCreatedAt(item.createdAt)}</span>
-                    <small>{item.targetUrl.replace(/^https?:\/\//, "")}</small>
-                    <em>점수 {item.report.score}</em>
-                  </button>
-                ))}
+        <aside className={styles.utilityDock}>
+          <button
+            type="button"
+            className={
+              utilityTab ? styles.utilityLauncherActive : styles.utilityLauncher
+            }
+            onClick={() =>
+              setUtilityTab((current) => (current ? null : "history"))
+            }
+          >
+            <span className={styles.utilityLauncherEyebrow}>워크스페이스</span>
+            <strong>도구함</strong>
+            <small>
+              {utilityTab === "history"
+                ? "최근 리포트 확인 중"
+                : utilityTab === "status"
+                  ? "분석 상태 확인 중"
+                  : utilityTab === "debug"
+                    ? "근거 데이터 확인 중"
+                    : "히스토리 · 상태 · 근거"}
+            </small>
+          </button>
+          {utilityTab ? (
+            <div className={styles.utilityPanel}>
+              <div className={styles.utilityTabs}>
+                <button
+                  type="button"
+                  className={
+                    utilityTab === "history"
+                      ? styles.utilityButtonActive
+                      : styles.utilityButton
+                  }
+                  onClick={() => setUtilityTab("history")}
+                >
+                  히스토리
+                  <span>{filteredHistory.length}</span>
+                </button>
+                <button
+                  type="button"
+                  className={
+                    utilityTab === "status"
+                      ? styles.utilityButtonActive
+                      : styles.utilityButton
+                  }
+                  onClick={() => setUtilityTab("status")}
+                >
+                  상태
+                  <span>{currentJob?.status === "running" ? "실행 중" : "대기"}</span>
+                </button>
+                <button
+                  type="button"
+                  className={
+                    utilityTab === "debug"
+                      ? styles.utilityButtonActive
+                      : styles.utilityButton
+                  }
+                  onClick={() => setUtilityTab("debug")}
+                >
+                  근거
+                  <span>{debug ? "준비됨" : "없음"}</span>
+                </button>
               </div>
-            ) : (
-              <p className={styles.helper}>
-                리포트를 한 번 생성하면 최근 분석 내역이 여기에 쌓입니다.
-              </p>
-            )}
-          </section>
+              {utilityTab === "history" ? (
+                <section className={`${styles.infoCard} ${styles.utilityCard}`}>
+                  <div className={styles.cardHead}>
+                    <strong>최근 분석 히스토리</strong>
+                    <span>저장된 리포트</span>
+                  </div>
+                  <div className={styles.historyToolbar}>
+                    <input
+                      aria-label="히스토리 검색"
+                      className={styles.historySearch}
+                      value={historyQuery}
+                      onChange={(event) => setHistoryQuery(event.target.value)}
+                      placeholder="도메인, 스탠스, 모드로 검색"
+                    />
+                    <select
+                      className={styles.historySortSelect}
+                      value={historySort}
+                      onChange={(event) =>
+                        setHistorySort(event.target.value as "latest" | "score")
+                      }
+                    >
+                      <option value="latest">최신순</option>
+                      <option value="score">점수순</option>
+                    </select>
+                  </div>
+                  {isLoadingHistory ? (
+                    <p className={styles.helper}>히스토리를 불러오는 중입니다.</p>
+                  ) : filteredHistory.length ? (
+                    <div className={styles.historyList}>
+                      {filteredHistory.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={
+                            item.id === currentReportId
+                              ? styles.historyItemActive
+                              : styles.historyItem
+                          }
+                          onClick={() => handleSelectHistory(item)}
+                        >
+                          <strong>{item.report.stance}</strong>
+                          <span>{formatCreatedAt(item.createdAt)}</span>
+                          <small>{item.targetUrl.replace(/^https?:\/\//, "")}</small>
+                          <small>
+                            {analysisModeOptions.find(
+                              (option) => option.value === (item.debug.analysisMode ?? "saas"),
+                            )?.label ?? "기본"}
+                          </small>
+                          <em>점수 {item.report.score}</em>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={styles.helper}>
+                      {history.length
+                        ? "검색 조건에 맞는 히스토리가 없습니다."
+                        : "리포트를 한 번 생성하면 최근 분석 내역이 여기에 쌓입니다."}
+                    </p>
+                  )}
+                </section>
+              ) : null}
 
-          <section className={`${styles.infoCard} ${styles.statusCard}`}>
-            <div className={styles.cardHead}>
-              <strong>분석 상태</strong>
-              <span>수집 품질</span>
+              {utilityTab === "status" ? (
+                <section className={`${styles.infoCard} ${styles.utilityCard}`}>
+                  <div className={styles.cardHead}>
+                    <strong>분석 상태</strong>
+                    <span>수집 품질</span>
+                  </div>
+                  <div className={styles.debugCard}>
+                    <p>수집 방식: {debug?.source ?? "대기 중"}</p>
+                    <p>신호 점수: {debug?.signalScore ?? currentJob?.signalScore ?? "-"}</p>
+                    <p>현재 단계: {currentJob?.stageLabel ?? "대기 중"}</p>
+                    <p>실행 프로바이더: {debug?.provider ?? settings?.settings.provider ?? "-"}</p>
+                    <p>실행 모델: {debug?.model ?? settings?.settings.model ?? "-"}</p>
+                    {debug?.warnings?.length ? (
+                      <ul className={styles.checklist}>
+                        {debug.warnings.map((warning) => (
+                          <li key={warning}>{warning}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className={styles.helper}>
+                        페이지 근거를 충분히 읽어오면 여기에 품질 상태가 표시됩니다.
+                      </p>
+                    )}
+                  </div>
+                </section>
+              ) : null}
+
+              {utilityTab === "debug" ? (
+                <section className={`${styles.infoCard} ${styles.utilityCard}`}>
+                  <div className={styles.cardHead}>
+                    <strong>분석 근거와 디버그 정보</strong>
+                    <span>원본 evidence</span>
+                  </div>
+                  {debug ? (
+                    <div className={styles.debugEvidence}>
+                      <div>
+                        <strong>페이지 제목</strong>
+                        <p>{debug.title ?? "-"}</p>
+                      </div>
+                      <div>
+                        <strong>페이지 설명</strong>
+                        <p>{debug.description ?? "-"}</p>
+                      </div>
+                      <div>
+                        <strong>헤딩</strong>
+                        <div className={styles.evidenceList}>
+                          {(debug.headings?.slice(0, 6) ?? []).map((item) => (
+                            <span key={item}>{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <strong>버튼</strong>
+                        <div className={styles.evidenceList}>
+                          {(debug.buttons?.slice(0, 6) ?? []).map((item) => (
+                            <span key={item}>{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <strong>링크</strong>
+                        <div className={styles.evidenceList}>
+                          {(debug.links?.slice(0, 6) ?? []).map((item) => (
+                            <span key={item}>{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                      {debug.screenshotDataUrl ? (
+                        <div>
+                          <strong>시각 근거 스크린샷</strong>
+                          <img
+                            className={styles.screenshotPreview}
+                            src={debug.screenshotDataUrl}
+                            alt="분석에 사용된 페이지 스크린샷"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className={styles.helper}>
+                      분석을 실행하면 AI가 참고한 원본 페이지 근거가 여기에 표시됩니다.
+                    </p>
+                  )}
+                </section>
+              ) : null}
             </div>
-            <div className={styles.debugCard}>
-              <p>수집 방식: {debug?.source ?? "대기 중"}</p>
-              <p>
-                신호 점수:{" "}
-                {debug?.signalScore ?? currentJob?.signalScore ?? "-"}
-              </p>
-              <p>현재 단계: {currentJob?.stageLabel ?? "대기 중"}</p>
-              <p>
-                실행 프로바이더:{" "}
-                {debug?.provider ?? settings?.settings.provider ?? "-"}
-              </p>
-              <p>
-                실행 모델: {debug?.model ?? settings?.settings.model ?? "-"}
-              </p>
-              {debug?.warnings?.length ? (
-                <ul className={styles.checklist}>
-                  {debug.warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className={styles.helper}>
-                  페이지 근거를 충분히 읽어오면 여기에 품질 상태가 표시됩니다.
-                </p>
-              )}
-            </div>
-          </section>
+          ) : null}
         </aside>
 
         <section className={styles.reportPanel}>
@@ -975,12 +1300,28 @@ export function UxCopilot() {
                     <span className={styles.reportLabel}>{report.target}</span>
                     <span className={styles.finalBadge}>최종 리포트</span>
                     <span className={styles.benchmarkBadge}>6축 기준</span>
+                    <span className={styles.modeBadge}>
+                      {
+                        analysisModeOptions.find(
+                          (option) =>
+                            option.value ===
+                            (debug?.analysisMode ??
+                              currentJob?.analysisMode ??
+                              "saas"),
+                        )?.label
+                      }
+                    </span>
                   </div>
                   <h3>{report.stance}</h3>
                 </div>
-                <div className={styles.scoreCard}>
-                  <span>종합 점수</span>
-                  <strong>{report.score}</strong>
+                <div className={styles.reportAside}>
+                  <div className={styles.scoreCard}>
+                    <span>종합 점수</span>
+                    <strong>{report.score}</strong>
+                  </div>
+                  {currentReportId ? (
+                    <ReportShareActions reportId={currentReportId} compact />
+                  ) : null}
                 </div>
               </div>
 
@@ -1035,28 +1376,85 @@ export function UxCopilot() {
                   </button>
                 </div>
                 <div className={styles.priorityGrid}>
-                  {topFindings.map((finding, index) => (
-                    <article
-                      key={`${finding.id}-priority`}
-                      className={styles.priorityCard}
-                    >
-                      <div className={styles.priorityTop}>
-                        <span className={styles.priorityIndex}>
-                          0{index + 1}
-                        </span>
-                        <span className={severityClassMap[finding.severity]}>
-                          {finding.severity}
-                        </span>
-                      </div>
-                      <span className={styles.axisBadge}>{finding.axis}</span>
-                      <strong>{finding.title}</strong>
-                      <p>{finding.action}</p>
-                    </article>
-                  ))}
+                  {topFindings.map((finding, index) => {
+                    const draft = getFindingDraft(finding.id, findingDrafts);
+
+                    return (
+                      <article
+                        key={`${finding.id}-priority`}
+                        className={styles.priorityCard}
+                      >
+                        <div className={styles.priorityMeta}>
+                          <div className={styles.priorityTop}>
+                            <span className={styles.priorityIndex}>
+                              0{index + 1}
+                            </span>
+                            <span
+                              className={severityClassMap[finding.severity]}
+                            >
+                              {finding.severity}
+                            </span>
+                          </div>
+                          <div className={styles.priorityAxisRow}>
+                            <span className={styles.axisBadge}>
+                              {finding.axis}
+                            </span>
+                          </div>
+                        </div>
+                        <strong>{finding.title}</strong>
+                        <p>{finding.action}</p>
+                        <div className={styles.findingOpsInline}>
+                          <span className={styles.statusChip}>
+                            {findingStatusLabelMap[draft.status]}
+                          </span>
+                          {draft.assignee ? (
+                            <span className={styles.assigneeChip}>
+                              담당 {draft.assignee}
+                            </span>
+                          ) : null}
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               </section>
 
               <p className={styles.summary}>{report.summary}</p>
+
+              {improvementDrafts.length ? (
+                <section className={styles.improvementDeck}>
+                  <div className={styles.cardHead}>
+                    <strong>바로 적용해볼 실행 초안</strong>
+                    <span>
+                      {
+                        analysisModeOptions.find(
+                          (option) => option.value === effectiveAnalysisMode,
+                        )?.label
+                      }
+                    </span>
+                  </div>
+                  <div className={styles.improvementGrid}>
+                    {improvementDrafts.map((draft) => (
+                      <article
+                        key={draft.id}
+                        className={styles.improvementCard}
+                      >
+                        <span className={styles.improvementEyebrow}>
+                          {draft.eyebrow}
+                        </span>
+                        <strong>{draft.title}</strong>
+                        <p>{draft.summary}</p>
+                        <ul className={styles.improvementList}>
+                          {draft.items.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                        <small>{draft.note}</small>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
 
               <div className={styles.sectionGrid}>
                 {report.sections.map((section) => (
@@ -1122,6 +1520,44 @@ export function UxCopilot() {
                       <span>하락한 섹션</span>
                       <strong>{comparison.regressedCount}</strong>
                     </article>
+                    <article>
+                      <span>유지된 섹션</span>
+                      <strong>{comparison.unchangedCount}</strong>
+                    </article>
+                  </div>
+                  <div className={styles.comparisonStatusRow}>
+                    <article className={styles.comparisonStatusCard}>
+                      <span>열림</span>
+                      <strong>{comparison.currentStatus.openCount}</strong>
+                      <em
+                        className={
+                          comparison.statusDelta.openCount <= 0
+                            ? styles.deltaPositive
+                            : styles.deltaNegative
+                        }
+                      >
+                        {comparison.statusDelta.openCount >= 0 ? "+" : ""}
+                        {comparison.statusDelta.openCount}
+                      </em>
+                    </article>
+                    <article className={styles.comparisonStatusCard}>
+                      <span>진행 중</span>
+                      <strong>
+                        {comparison.currentStatus.inProgressCount}
+                      </strong>
+                      <em className={styles.deltaNeutral}>
+                        {comparison.statusDelta.inProgressCount >= 0 ? "+" : ""}
+                        {comparison.statusDelta.inProgressCount}
+                      </em>
+                    </article>
+                    <article className={styles.comparisonStatusCard}>
+                      <span>해결됨</span>
+                      <strong>{comparison.currentStatus.resolvedCount}</strong>
+                      <em className={styles.deltaPositive}>
+                        {comparison.statusDelta.resolvedCount >= 0 ? "+" : ""}
+                        {comparison.statusDelta.resolvedCount}
+                      </em>
+                    </article>
                   </div>
                   <div className={styles.comparisonGrid}>
                     <div className={styles.comparisonBlock}>
@@ -1129,7 +1565,12 @@ export function UxCopilot() {
                       {comparison.addedFindings.length ? (
                         <ul className={styles.checklist}>
                           {comparison.addedFindings.map((item) => (
-                            <li key={item}>{item}</li>
+                            <li key={item.id}>
+                              <span>{item.title}</span>
+                              <small>
+                                {item.severity} · {item.axis}
+                              </small>
+                            </li>
                           ))}
                         </ul>
                       ) : (
@@ -1143,7 +1584,12 @@ export function UxCopilot() {
                       {comparison.resolvedFindings.length ? (
                         <ul className={styles.checklist}>
                           {comparison.resolvedFindings.map((item) => (
-                            <li key={item}>{item}</li>
+                            <li key={item.id}>
+                              <span>{item.title}</span>
+                              <small>
+                                {item.severity} · {item.axis}
+                              </small>
+                            </li>
                           ))}
                         </ul>
                       ) : (
@@ -1217,9 +1663,101 @@ export function UxCopilot() {
                     ) : null}
                     <strong>권장 수정안</strong>
                     <p>{finding.action}</p>
+                    {(() => {
+                      const draft = getFindingDraft(finding.id, findingDrafts);
+
+                      return (
+                        <div className={styles.findingOps}>
+                          <div className={styles.findingOpsHead}>
+                            <strong>팀 실행 상태</strong>
+                            <span className={styles.helper}>
+                              리포트를 실제 작업으로 이어가세요
+                            </span>
+                          </div>
+                          <div className={styles.findingOpsGrid}>
+                            <label
+                              className={styles.field}
+                              style={{
+                                marginTop: "14px",
+                              }}
+                            >
+                              <span>상태</span>
+                              <select
+                                className={styles.select}
+                                value={draft.status}
+                                onChange={(event) =>
+                                  handleFindingDraftChange(finding.id, {
+                                    status: event.target.value as FindingStatus,
+                                  })
+                                }
+                              >
+                                <option value="open">열림</option>
+                                <option value="in_progress">진행 중</option>
+                                <option value="resolved">해결됨</option>
+                              </select>
+                            </label>
+                            <label className={styles.field}>
+                              <span>담당자</span>
+                              <input
+                                value={draft.assignee}
+                                onChange={(event) =>
+                                  handleFindingDraftChange(finding.id, {
+                                    assignee: event.target.value,
+                                  })
+                                }
+                                placeholder="예: 지민"
+                              />
+                            </label>
+                          </div>
+                          <label className={styles.field}>
+                            <span>팀 메모</span>
+                            <textarea
+                              className={styles.textarea}
+                              value={draft.note}
+                              onChange={(event) =>
+                                handleFindingDraftChange(finding.id, {
+                                  note: event.target.value,
+                                })
+                              }
+                              placeholder="수정 방향, 논의 내용, 작업 링크 등을 남겨두세요."
+                            />
+                          </label>
+                          <div className={styles.findingOpsFooter}>
+                            <div className={styles.findingOpsInline}>
+                              <span className={styles.statusChip}>
+                                {findingStatusLabelMap[draft.status]}
+                              </span>
+                              {draft.assignee ? (
+                                <span className={styles.assigneeChip}>
+                                  담당 {draft.assignee}
+                                </span>
+                              ) : (
+                                <span className={styles.description}>
+                                  아직 담당자가 없습니다
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              className={styles.secondaryButton}
+                              disabled={savingFindingId === finding.id}
+                              onClick={() => handleSaveFinding(finding.id)}
+                            >
+                              {savingFindingId === finding.id
+                                ? "저장 중..."
+                                : "상태 저장"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </article>
                 ))}
               </div>
+
+              {collaborationError ? (
+                <p className={styles.error}>{collaborationError}</p>
+              ) : null}
 
               <div className={styles.highlights}>
                 {(filteredHighlights.length
@@ -1250,13 +1788,12 @@ export function UxCopilot() {
                     <span className={styles.emptyPulse} />
                     분석 준비 완료
                   </div>
-                  <h3>
-                    설정을 마치면 이 공간이 AI UX 리포트 캔버스로 바뀝니다
-                  </h3>
+                  <h3>리포트를 생성해보세요</h3>
                   <p>
                     점수, 우선 수정안, 비교 리포트, 근거 요약까지 한 번에 읽히는
                     메인 보드입니다.
-                    <br />첫 분석을 실행하면 이 영역이 결과 중심 화면으로 바로
+                    <br />
+                    분석을 실행하면 이 영역이 결과 중심 화면으로 바로
                     전환됩니다.
                   </p>
 

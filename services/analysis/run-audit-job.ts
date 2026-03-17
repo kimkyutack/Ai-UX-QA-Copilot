@@ -19,6 +19,7 @@ import type {
 } from "@/types/domain/audit-job";
 import type { AuditReportRecord } from "@/types/domain/audit-report-record";
 import type { AIProvider } from "@/types/domain/ai-settings";
+import type { AnalysisMode } from "@/types/domain/analysis-mode";
 
 const defaultProjectId = "demo-project";
 const baseAgentStates: AuditJobAgentState[] = [
@@ -33,10 +34,12 @@ function buildDebugPayload(
   options?: {
     provider?: AIProvider;
     model?: string;
+    analysisMode?: AnalysisMode;
     agentTraces?: AuditAgentTrace[];
   },
 ) {
   return {
+    analysisMode: options?.analysisMode,
     signalScore: pageContext.signalScore,
     warnings: pageContext.warnings,
     source: pageContext.source,
@@ -166,12 +169,14 @@ function updateAgentStates(
 export async function createQueuedAuditJob(input: {
   url: string;
   projectId?: string;
+  analysisMode?: AnalysisMode;
 }) {
   const now = new Date().toISOString();
   const job: AuditJob = {
     id: randomUUID(),
     projectId: input.projectId ?? defaultProjectId,
     targetUrl: input.url,
+    analysisMode: input.analysisMode ?? "saas",
     status: "queued",
     stage: "queued",
     stageLabel: stageLabel("queued"),
@@ -190,6 +195,7 @@ export async function processAuditJob(
   input: {
     url: string;
     projectId?: string;
+    analysisMode?: AnalysisMode;
     providerSettings?: ProviderRequestSettings;
   },
 ) {
@@ -214,6 +220,7 @@ export async function processAuditJob(
     const debug = buildDebugPayload(pageContext, {
       provider: providerSettings.provider,
       model: providerSettings.model,
+      analysisMode: input.analysisMode,
     });
 
     if (pageContext.signalScore < 4) {
@@ -239,6 +246,7 @@ export async function processAuditJob(
       input.url,
       pageContext,
       providerSettings,
+      input.analysisMode ?? "saas",
       {
         onStageChange: async (nextStage) => {
           await updateAuditJob(jobId, (current) => ({
@@ -320,6 +328,7 @@ export async function processAuditJob(
       debug: buildDebugPayload(pageContext, {
         provider: providerSettings.provider,
         model: providerSettings.model,
+        analysisMode: input.analysisMode,
         agentTraces: orchestrated.agentTraces,
       }),
     };
@@ -371,6 +380,7 @@ export async function processAuditJob(
 export async function runAuditJob(input: {
   url: string;
   projectId?: string;
+  analysisMode?: AnalysisMode;
   providerSettings?: ProviderRequestSettings;
 }) {
   const job = await createQueuedAuditJob(input);

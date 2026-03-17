@@ -1,0 +1,54 @@
+.wrap,
+.compactWrap {
+  display: grid;
+  gap: 10px;
+}
+
+.compactWrap {
+  justify-items: end;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.linkButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.linkButton {
+  background: linear-gradient(135deg, #0f172a, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(29, 78, 216, 0.18);
+}
+
+.secondaryButton {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  color: #334155;
+}
+
+.notice {
+  margin: 0;
+  color: #1d4ed8;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+@media print {
+  .wrap,
+  .compactWrap {
+    display: none;
+  }
+}

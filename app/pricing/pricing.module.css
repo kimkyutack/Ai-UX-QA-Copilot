@@ -1,0 +1,426 @@
+.page {
+  padding: 92px 0 96px;
+}
+
+.shellWide {
+  width: min(1520px, calc(100vw - 20px));
+}
+
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 520px);
+  gap: 28px;
+  min-height: 74vh;
+  padding: 44px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 40px;
+  background:
+    radial-gradient(
+      circle at 12% 10%,
+      rgba(37, 99, 235, 0.14),
+      transparent 22%
+    ),
+    radial-gradient(
+      circle at 88% 82%,
+      rgba(59, 130, 246, 0.18),
+      transparent 26%
+    ),
+    linear-gradient(180deg, #fbfdff 0%, #eef5ff 100%);
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.07);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heroCopy {
+  align-content: center;
+}
+
+.heroCopy h1,
+.storyCard h2,
+.storyCardAlt h2,
+.ctaBand h2 {
+  margin: 18px 0 14px;
+  color: #0f172a;
+  letter-spacing: -0.08em;
+}
+
+.heroCopy h1 {
+  max-width: 10ch;
+  font-size: clamp(3.2rem, 6vw, 5.8rem);
+  line-height: 0.92;
+}
+
+.heroCopy p,
+.storyCard p,
+.storyCardAlt p {
+  margin: 0;
+  max-width: 60ch;
+  color: #475467;
+  font-size: 1.05rem;
+  line-height: 1.78;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.primaryAction,
+.secondaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 0 18px;
+  border-radius: 16px;
+  font-weight: 700;
+}
+
+.primaryAction {
+  background: linear-gradient(135deg, #1537b8, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 18px 34px rgba(37, 99, 235, 0.26);
+}
+
+.secondaryAction {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  color: #0f172a;
+}
+
+.heroVisual {
+  position: relative;
+  display: grid;
+  align-items: center;
+}
+
+.visualGlow {
+  position: absolute;
+  inset: 8% 10% 10% 14%;
+  border-radius: 36px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.2), transparent 62%);
+  filter: blur(24px);
+  animation: glowShift 7s ease-in-out infinite;
+}
+
+.visualStage {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.08);
+}
+
+.visualTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.visualTop span {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.visualTop strong {
+  color: #0f172a;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.visualMeter {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.visualFill {
+  width: 58%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1537b8, #3b82f6 60%, #93c5fd);
+  animation: meterPulse 4.8s ease-in-out infinite;
+}
+
+.visualCards {
+  display: grid;
+  gap: 12px;
+}
+
+.visualCard {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: 22px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.94),
+    rgba(244, 248, 255, 0.86)
+  );
+  transform: translateY(0);
+  animation: floatCard 6s ease-in-out infinite;
+}
+
+.visualCard:nth-child(2) {
+  animation-delay: 0.8s;
+}
+
+.visualCard:nth-child(3) {
+  animation-delay: 1.6s;
+}
+
+.visualCard span {
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.visualCard strong {
+  color: #0f172a;
+  font-size: 1rem;
+  letter-spacing: -0.03em;
+}
+
+.planRail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.planCard,
+.planFeatured,
+.storyCard,
+.storyCardAlt,
+.ctaBand {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 30px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.05);
+}
+
+.planCard,
+.planFeatured {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.planFeatured {
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(37, 99, 235, 0.14),
+      transparent 42%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(241, 247, 255, 0.92)
+    );
+  border-color: rgba(37, 99, 235, 0.18);
+}
+
+.planHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.planHead span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.planHead strong {
+  color: #1d4ed8;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.planCard p,
+.planFeatured p {
+  margin: 0;
+  color: #334155;
+  font-weight: 700;
+}
+
+.planPoints {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+  color: #475467;
+}
+
+.storySection {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.storyCard,
+.storyCardAlt {
+  padding: 28px;
+}
+
+.storyCard {
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(37, 99, 235, 0.12),
+      transparent 28%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(242, 247, 255, 0.94)
+    );
+}
+
+.storyCardAlt {
+  background: linear-gradient(135deg, #0f172a, #1537b8 72%, #2563eb);
+}
+
+.storyCardAlt h2,
+.storyCardAlt p,
+.storyCardAlt .storyLabel {
+  color: #ffffff;
+}
+
+.storyLabel {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ctaBand {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  margin-top: 24px;
+  padding: 26px 30px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(239, 246, 255, 0.94)
+  );
+}
+
+.ctaBand h2 {
+  font-size: clamp(1.8rem, 3vw, 3rem);
+  line-height: 1;
+}
+
+@keyframes glowShift {
+  0%,
+  100% {
+    transform: scale(0.96) translate3d(0, 0, 0);
+    opacity: 0.72;
+  }
+  50% {
+    transform: scale(1.04) translate3d(8px, -10px, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes meterPulse {
+  0%,
+  100% {
+    width: 58%;
+  }
+  50% {
+    width: 74%;
+  }
+}
+
+@keyframes floatCard {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (max-width: 1120px) {
+  .hero,
+  .planRail,
+  .storySection,
+  .ctaBand {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding-top: 84px;
+  }
+
+  .hero,
+  .planCard,
+  .planFeatured,
+  .storyCard,
+  .storyCardAlt,
+  .ctaBand {
+    padding: 22px;
+  }
+
+  .heroCopy h1 {
+    max-width: none;
+  }
+
+  .primaryAction,
+  .secondaryAction {
+    width: 100%;
+  }
+}

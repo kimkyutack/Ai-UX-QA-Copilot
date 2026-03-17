@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createQueuedAuditJob } from "@/services/analysis/run-audit-job";
 import { listAuditJobs } from "@/services/repositories/audit-store";
 import type { CreateJobRequest } from "@/types/api/jobs";
+import type { AnalysisMode } from "@/types/domain/analysis-mode";
 
 export async function GET() {
   const jobs = await listAuditJobs();
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
   const job = await createQueuedAuditJob({
     url: normalized,
     projectId: body.projectId,
+    analysisMode: (body.analysisMode ?? "saas") as AnalysisMode,
   });
 
   return NextResponse.json({ job }, { status: 202 });

@@ -8,7 +8,9 @@ import type {
   AuditJobStage,
   AuditJobStatus,
 } from "@/types/domain/audit-job";
+import type { AnalysisMode } from "@/types/domain/analysis-mode";
 import type { AuditReportRecord } from "@/types/domain/audit-report-record";
+import type { FindingCollaboration, FindingStatus } from "@/types/domain/report-collaboration";
 
 const dataDir = path.join(process.cwd(), ".data");
 const jobsFile = path.join(dataDir, "audit-jobs.json");
@@ -69,6 +71,7 @@ function mapStoredJob(job: {
   id: string;
   projectId: string | null;
   targetUrl: string;
+  analysisMode?: string | null;
   status: string;
   stage: string | null;
   stageLabel: string | null;
@@ -85,6 +88,7 @@ function mapStoredJob(job: {
     id: job.id,
     projectId: job.projectId ?? "demo-project",
     targetUrl: job.targetUrl,
+    analysisMode: (job.analysisMode as AnalysisMode | null) ?? "saas",
     status: job.status as AuditJobStatus,
     stage: (job.stage ?? job.status ?? "queued") as AuditJobStage,
     stageLabel: job.stageLabel ?? undefined,
@@ -115,6 +119,7 @@ function mapStoredReport(report: {
   targetUrl: string;
   createdAt: Date | string;
   summaryJson: unknown;
+  collaborationJson?: unknown;
   debugJson: unknown;
 }): AuditReportRecord {
   return {
@@ -127,6 +132,7 @@ function mapStoredReport(report: {
         ? report.createdAt
         : report.createdAt.toISOString(),
     report: report.summaryJson as AuditReportRecord["report"],
+    collaboration: report.collaborationJson as AuditReportRecord["collaboration"],
     debug: report.debugJson as AuditReportRecord["debug"],
   };
 }
@@ -171,6 +177,7 @@ export async function createAuditJob(job: AuditJob) {
       id: job.id,
       projectId: job.projectId,
       targetUrl: job.targetUrl,
+      analysisMode: job.analysisMode,
       status: job.status,
       stage: job.stage,
       stageLabel: job.stageLabel,
@@ -216,6 +223,7 @@ export async function updateAuditJob(
     data: {
       projectId: nextJob.projectId,
       targetUrl: nextJob.targetUrl,
+      analysisMode: nextJob.analysisMode,
       status: nextJob.status,
       stage: nextJob.stage,
       stageLabel: nextJob.stageLabel,
@@ -278,6 +286,23 @@ export async function listAuditReportsByTargetUrl(targetUrl: string, limit = 10)
   return reports.map(mapStoredReport);
 }
 
+export async function listAuditReportsByProjectId(projectId: string, limit = 20) {
+  const prisma = getPrismaClient();
+
+  if (!prisma) {
+    const reports = await listAuditReportsFromFile();
+    return reports.filter((report) => report.projectId === projectId).slice(0, limit);
+  }
+
+  const reports = await prisma.auditReport.findMany({
+    where: { projectId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+
+  return reports.map(mapStoredReport);
+}
+
 export async function saveAuditReport(report: AuditReportRecord) {
   const prisma = getPrismaClient();
 
@@ -295,12 +320,91 @@ export async function saveAuditReport(report: AuditReportRecord) {
       projectId: report.projectId,
       targetUrl: report.targetUrl,
       summaryJson: report.report,
+      collaborationJson: report.collaboration,
       debugJson: report.debug,
       createdAt: new Date(report.createdAt),
     },
   });
 
   return report;
+}
+
+function updateFindingStates(
+  currentStates: FindingCollaboration[] | undefined,
+  payload: {
+    findingId: string;
+    status: FindingStatus;
+    assignee?: string;
+    note?: string;
+  },
+) {
+  const nextState: FindingCollaboration = {
+    findingId: payload.findingId,
+    status: payload.status,
+    assignee: payload.assignee?.trim() || undefined,
+    note: payload.note?.trim() || undefined,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const existing = currentStates ?? [];
+  const withoutTarget = existing.filter((item) => item.findingId !== payload.findingId);
+
+  return [...withoutTarget, nextState];
+}
+
+export async function updateAuditReportFinding(
+  reportId: string,
+  payload: {
+    findingId: string;
+    status: FindingStatus;
+    assignee?: string;
+    note?: string;
+  },
+) {
+  const prisma = getPrismaClient();
+
+  if (!prisma) {
+    const reports = await listAuditReportsFromFile();
+    const nextReports = reports.map((report) => {
+      if (report.id !== reportId) {
+        return report;
+      }
+
+      return {
+        ...report,
+        collaboration: {
+          findingStates: updateFindingStates(report.collaboration?.findingStates, payload),
+        },
+      };
+    });
+
+    await writeJsonFile(reportsFile, nextReports);
+    return nextReports.find((report) => report.id === reportId);
+  }
+
+  const current = await prisma.auditReport.findUnique({
+    where: { id: reportId },
+  });
+
+  if (!current) {
+    return undefined;
+  }
+
+  const nextCollaboration = {
+    findingStates: updateFindingStates(
+      (current.collaborationJson as AuditReportRecord["collaboration"] | undefined)?.findingStates,
+      payload,
+    ),
+  };
+
+  const updated = await prisma.auditReport.update({
+    where: { id: reportId },
+    data: {
+      collaborationJson: nextCollaboration,
+    },
+  });
+
+  return mapStoredReport(updated);
 }
 
 export async function getAuditReport(reportId: string) {

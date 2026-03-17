@@ -10,6 +10,7 @@ import type {
   AuditSection,
   Severity,
 } from "@/types/audit";
+import type { AnalysisMode } from "@/types/domain/analysis-mode";
 import type { AuditAgentResult } from "@/types/domain/agent-run";
 import type { PageContext } from "@/types/page-context";
 
@@ -207,11 +208,20 @@ function calibrateBenchmarkReport(report: AuditReport, agentResults: AuditAgentR
   };
 }
 
+const analysisModeInstructions: Record<AnalysisMode, string> = {
+  saas: "SaaS 랜딩 기준으로 종합하세요. 제품이 무엇인지, 어떤 팀을 위한지, 어떤 행동을 기대하는지 빠르게 이해되는지가 중요합니다.",
+  ecommerce: "이커머스 기준으로 종합하세요. 상품 이해, 가격/혜택 전달, 구매 흐름, 신뢰 형성, 구매 CTA 마찰을 우선합니다.",
+  portfolio: "포트폴리오 기준으로 종합하세요. 작업 대표성, 신뢰 형성, 자기소개 명확성, 문의 또는 지원 전환을 우선합니다.",
+  recruiting: "채용 페이지 기준으로 종합하세요. 포지션 이해, 기대 역할, 지원 절차, 문화와 보상 정보, 지원 전환을 우선합니다.",
+  docs: "문서/가이드 기준으로 종합하세요. 탐색 구조, 정보 계층, 예제 가시성, 학습 동선, 다음 단계 유도를 우선합니다.",
+};
+
 export async function synthesizeAuditReport(
   target: string,
   pageContext: PageContext,
   agentResults: AuditAgentResult[],
   settings: ProviderRuntimeSettings,
+  analysisMode: AnalysisMode,
 ) {
   const heuristicReport = generateHeuristicAuditReport(target);
   const benchmarkLabel = getBenchmarkSiteLabel(pageContext.url);
@@ -232,6 +242,7 @@ export async function synthesizeAuditReport(
         "당신은 최종 UX 리포트 정리 에이전트입니다.",
         "평가 기준은 Linear 같은 높은 완성도의 툴형 SaaS UX입니다.",
         "특히 빠른 이해, 강한 정보 계층, 절제된 밀도, 분명한 상태 표현, 일관된 컴포넌트 규칙을 기준으로 최종 판단하세요.",
+        analysisModeInstructions[analysisMode],
         benchmarkRule,
         "모든 finding은 반드시 다음 6축 중 하나로만 분류하세요: 명확성, 행동 유도, 정보 계층, 밀도와 여백, 상태 표현, 일관성.",
         "여러 전문 에이전트의 결과를 종합해 최종 UX 감사 리포트를 작성하세요.",
